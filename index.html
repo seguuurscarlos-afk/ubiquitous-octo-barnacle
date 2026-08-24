@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Simulador Escolar de MRU</title>
+<style>
+  :root{
+    --bg:#f4f7fb; --card:#ffffff; --ink:#182338; --muted:#64748b;
+    --primary:#3157d5; --primary2:#2444b3; --accent:#12a4a6;
+    --line:#dce3ee; --track:#d9dee8; --danger:#d94b55;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif}
+  .app{max-width:1050px;margin:auto;padding:16px}
+  header{background:linear-gradient(135deg,#243b8f,#3157d5);color:#fff;border-radius:20px;padding:20px 18px;margin-bottom:14px;box-shadow:0 8px 24px #18306b22}
+  h1{font-size:clamp(22px,5vw,32px);margin:0 0 6px}
+  header p{margin:0;opacity:.9;font-size:14px}
+  .grid{display:grid;grid-template-columns:320px 1fr;gap:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 5px 18px #1d31550b}
+  .card h2{font-size:17px;margin:0 0 12px}
+  label{display:block;font-size:13px;font-weight:700;margin:12px 0 6px}
+  input{width:100%;padding:11px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px;background:#fff;color:var(--ink)}
+  .unit{font-size:12px;color:var(--muted);margin-top:4px}
+  .buttons{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:16px}
+  button{border:0;border-radius:11px;padding:12px 8px;font-size:14px;font-weight:700;cursor:pointer}
+  .start{background:var(--primary);color:white}.pause{background:#e8edf8;color:#26365d}.reset{background:#fbeaec;color:#9f3039}
+  button:active{transform:scale(.98)}
+  .status{margin-top:10px;padding:10px;border-radius:10px;background:#eef7f7;color:#17686a;font-size:13px;text-align:center}
+  .scene{min-height:290px;display:flex;flex-direction:column;justify-content:center}
+  .readouts{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:18px}
+  .metric{border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
+  .metric .v{font-size:20px;font-weight:800;margin-top:4px}
+  .metric .k{font-size:11px;color:var(--muted)}
+  .trackWrap{padding:25px 10px 8px}
+  .track{height:14px;background:var(--track);border-radius:99px;position:relative;margin:0 12px}
+  .object{position:absolute;top:50%;transform:translate(-50%,-62%);width:58px;height:40px;left:0;filter:drop-shadow(0 4px 4px #243b8f35)}
+  .carBody{position:absolute;left:3px;top:12px;width:52px;height:22px;background:#3157d5;border:3px solid white;border-radius:7px 10px 5px 5px}
+  .carBody:before{content:"";position:absolute;left:10px;top:-11px;width:28px;height:13px;background:#3157d5;border:3px solid white;border-bottom:0;border-radius:8px 9px 0 0}
+  .window{position:absolute;left:15px;top:-7px;width:18px;height:7px;background:#d9efff;border-radius:3px}
+  .wheel{position:absolute;bottom:0px;width:12px;height:12px;background:#263238;border:2px solid white;border-radius:50%}
+  .wheel1{left:9px}.wheel2{right:9px}
+  .trackLabel{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin:9px 12px 0}
+  .formula{background:#f7f9fc;border:1px dashed #cbd5e1;border-radius:12px;padding:11px;margin-top:15px;font-size:13px}
+  .formula b{color:var(--primary2)}
+  .tableCard{margin-top:14px}
+  .tableScroll{overflow:auto;max-height:250px;border:1px solid var(--line);border-radius:10px}
+  table{border-collapse:collapse;width:100%;min-width:510px;font-size:12px}
+  th,td{padding:8px;border-bottom:1px solid var(--line);text-align:right}
+  th{background:#f7f9fc;position:sticky;top:0}
+  th:first-child,td:first-child{text-align:center}
+  .chartBox{height:260px;position:relative;border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}
+  canvas{width:100%;height:100%;display:block}
+  .note{font-size:12px;color:var(--muted);line-height:1.45;margin-top:10px}
+  .footer{font-size:11px;color:var(--muted);text-align:center;padding:14px}
+  @media(max-width:760px){
+    .app{padding:10px}.grid{grid-template-columns:1fr}.card{padding:13px}
+    .readouts{grid-template-columns:repeat(2,1fr)}
+    .scene{min-height:310px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <h1>Simulador escolar de MRU</h1>
+  <p>Movimiento Rectilíneo Uniforme · laboratorio virtual interactivo</p>
+</header>
+
+<div class="grid">
+  <section class="card">
+    <h2>⚙️ Configuración</h2>
+    <label for="x0">Posición inicial (x₀)</label>
+    <input id="x0" type="number" value="0" step="0.1">
+    <div class="unit">metros (m)</div>
+
+    <label for="v0">Velocidad inicial (v₀)</label>
+    <input id="v0" type="number" value="5" step="0.1">
+    <div class="unit">metros por segundo (m/s)</div>
+
+    <label for="duration">Duración del experimento</label>
+    <input id="duration" type="number" value="10" min="0.5" step="0.5">
+    <div class="unit">segundos (s)</div>
+
+    <div class="buttons">
+      <button class="start" id="startBtn">▶ Iniciar</button>
+      <button class="pause" id="pauseBtn">Ⅱ Pausar</button>
+      <button class="reset" id="resetBtn">↻ Reiniciar</button>
+    </div>
+    <div class="status" id="status">Listo para comenzar</div>
+
+    <div class="formula">
+      <b>MRU:</b> x(t) = x₀ + v₀ · t<br>
+      La velocidad permanece constante y la aceleración es 0 m/s².
+    </div>
+  </section>
+
+  <section class="card scene">
+    <h2>🎯 Movimiento en la pista</h2>
+    <div class="readouts">
+      <div class="metric"><div class="k">TIEMPO</div><div class="v" id="timeOut">0.00 s</div></div>
+      <div class="metric"><div class="k">POSICIÓN</div><div class="v" id="posOut">0.00 m</div></div>
+      <div class="metric"><div class="k">VELOCIDAD</div><div class="v" id="velOut">5.00 m/s</div></div>
+      <div class="metric"><div class="k">ACELERACIÓN</div><div class="v">0.00 m/s²</div></div>
+    </div>
+
+    <div class="trackWrap">
+      <div class="track" id="track">
+      <div class="object" id="object" aria-label="Carrito">
+        <div class="carBody"><div class="window"></div></div>
+        <div class="wheel wheel1"></div><div class="wheel wheel2"></div>
+      </div>
+    </div>
+      <div class="trackLabel"><span id="minLabel">0 m</span><span id="maxLabel">50 m</span></div>
+    </div>
+    <div class="note">🚗 El carrito representa el móvil. El recorrido se escala automáticamente para que permanezca visible en la pista.</div>
+  </section>
+</div>
+
+<section class="card tableCard">
+  <h2>📋 Registro automático de datos</h2>
+  <div class="tableScroll">
+    <table>
+      <thead><tr><th>#</th><th>Tiempo (s)</th><th>Posición (m)</th><th>Velocidad (m/s)</th><th>Aceleración (m/s²)</th></tr></thead>
+      <tbody id="dataBody"></tbody>
+    </table>
+  </div>
+  <div class="note">Se registra una medición aproximadamente cada 0,25 s. Puedes usar estos datos para comparar el movimiento con la ecuación del MRU.</div>
+</section>
+
+<section class="card" style="margin-top:14px">
+  <h2>📈 Gráfica posición – tiempo</h2>
+  <div class="chartBox"><canvas id="chart"></canvas></div>
+  <div class="note">En MRU, la gráfica posición-tiempo es una línea recta. La pendiente representa la velocidad.</div>
+</section>
+
+<div class="footer">Simulador escolar propio · MRU · diseñado para uso educativo y grabación de pantalla</div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const x0El=$('x0'), v0El=$('v0'), durEl=$('duration');
+const timeOut=$('timeOut'), posOut=$('posOut'), velOut=$('velOut');
+const object=$('object'), track=$('track'), statusEl=$('status'), dataBody=$('dataBody');
+const canvas=$('chart'), ctx=canvas.getContext('2d');
+
+let running=false, finished=false, simTime=0, lastFrame=0, lastRecord=-1;
+let data=[];
+
+function params(){
+  let x0=parseFloat(x0El.value); if(!Number.isFinite(x0)) x0=0;
+  let v=parseFloat(v0El.value); if(!Number.isFinite(v)) v=0;
+  let duration=parseFloat(durEl.value); if(!Number.isFinite(duration)||duration<=0) duration=10;
+  return {x0,v,duration};
+}
+function niceRange(a,b){
+  if(a===b){a-=1;b+=1}
+  const pad=(b-a)*0.12;
+  return {min:a-pad,max:b+pad};
+}
+function render(){
+  const p=params(), x=p.x0+p.v*simTime;
+  const endX=p.x0+p.v*p.duration;
+  const r=niceRange(Math.min(p.x0,endX),Math.max(p.x0,endX));
+  const ratio=(x-r.min)/(r.max-r.min);
+  object.style.left=(Math.max(0,Math.min(1,ratio))*100)+'%';
+  $('minLabel').textContent=r.min.toFixed(1)+' m';
+  $('maxLabel').textContent=r.max.toFixed(1)+' m';
+  timeOut.textContent=simTime.toFixed(2)+' s';
+  posOut.textContent=x.toFixed(2)+' m';
+  velOut.textContent=p.v.toFixed(2)+' m/s';
+  drawChart();
+}
+function addRecord(){
+  const p=params(), x=p.x0+p.v*simTime;
+  data.push({t:simTime,x,v:p.v,a:0});
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td>${data.length}</td><td>${simTime.toFixed(2)}</td><td>${x.toFixed(2)}</td><td>${p.v.toFixed(2)}</td><td>0.00</td>`;
+  dataBody.appendChild(tr);
+  tr.scrollIntoView({block:'nearest'});
+}
+function reset(){
+  running=false; finished=false; simTime=0; lastFrame=0; lastRecord=-1; data=[];
+  dataBody.innerHTML='';
+  statusEl.textContent='Listo para comenzar';
+  addRecord(); render();
+}
+function loop(ts){
+  if(!running)return;
+  if(!lastFrame)lastFrame=ts;
+  const dt=(ts-lastFrame)/1000; lastFrame=ts;
+  simTime+=dt;
+  const p=params();
+  if(simTime>=p.duration){simTime=p.duration; running=false; finished=true; statusEl.textContent='Experimento terminado';}
+  const recStep=.25;
+  if(lastRecord<0 || simTime-lastRecord>=recStep || !running){
+    addRecord(); lastRecord=simTime;
+  }
+  render();
+  if(running)requestAnimationFrame(loop);
+}
+$('startBtn').onclick=()=>{
+  if(finished)reset();
+  running=true; statusEl.textContent='Movimiento en curso…'; lastFrame=0; requestAnimationFrame(loop);
+};
+$('pauseBtn').onclick=()=>{
+  running=false; statusEl.textContent='Movimiento pausado'; lastFrame=0;
+};
+$('resetBtn').onclick=reset;
+[x0El,v0El,durEl].forEach(el=>el.addEventListener('input',()=>{if(!running){simTime=Math.min(simTime,params().duration);render();}}));
+
+function resizeCanvas(){
+  const dpr=window.devicePixelRatio||1;
+  const rect=canvas.getBoundingClientRect();
+  canvas.width=Math.max(1,Math.floor(rect.width*dpr));
+  canvas.height=Math.max(1,Math.floor(rect.height*dpr));
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  drawChart();
+}
+function drawChart(){
+  const rect=canvas.getBoundingClientRect(), W=rect.width, H=rect.height;
+  ctx.clearRect(0,0,W,H);
+  const p=params();
+  let pts=data.length?data.map(d=>[d.t,d.x]):[[0,p.x0]];
+  const endX=p.x0+p.v*p.duration;
+  const xs=[p.x0,endX,...pts.map(z=>z[1])];
+  const ys=[0,p.duration,...pts.map(z=>z[0])];
+  let xmin=Math.min(...xs), xmax=Math.max(...xs); if(xmin===xmax){xmin-=1;xmax+=1}
+  let ymin=0, ymax=Math.max(...ys,1);
+  const left=48,right=15,top=18,bottom=36;
+  const cw=W-left-right,ch=H-top-bottom;
+  const sx=x=>left+(x-xmin)/(xmax-xmin)*cw;
+  const sy=t=>(H-bottom)-(t-ymin)/(ymax-ymin)*ch;
+  ctx.font='11px Arial'; ctx.fillStyle='#64748b'; ctx.strokeStyle='#e3e8f0'; ctx.lineWidth=1;
+  for(let i=0;i<=5;i++){
+    const xx=left+cw*i/5;
+    ctx.beginPath();ctx.moveTo(xx,top);ctx.lineTo(xx,H-bottom);ctx.stroke();
+    const val=xmin+(xmax-xmin)*i/5;
+    ctx.fillText(val.toFixed(1),xx-12,H-14);
+  }
+  for(let i=0;i<=4;i++){
+    const yy=top+ch*i/4;
+    ctx.beginPath();ctx.moveTo(left,yy);ctx.lineTo(W-right,yy);ctx.stroke();
+    const val=ymax-(ymax-ymin)*i/4;
+    ctx.fillText(val.toFixed(1),8,yy+4);
+  }
+  ctx.fillStyle='#182338';ctx.fillText('Posición (m)',left,12);ctx.fillText('Tiempo (s)',W-62,H-14);
+  ctx.strokeStyle='#3157d5';ctx.lineWidth=2.5;ctx.beginPath();
+  const n=Math.max(2,Math.round(p.duration*10));
+  for(let i=0;i<n;i++){
+    const t=p.duration*i/(n-1), x=p.x0+p.v*t;
+    const px=sx(x),py=sy(t);
+    if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+  }
+  ctx.stroke();
+  if(data.length){
+    ctx.fillStyle='#12a4a6';
+    for(const d of data){ctx.beginPath();ctx.arc(sx(d.x),sy(d.t),2.7,0,Math.PI*2);ctx.fill();}
+  }
+}
+window.addEventListener('resize',resizeCanvas);
+reset(); resizeCanvas();
+</script>
+</body>
+</html>
